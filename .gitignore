@@ -1,0 +1,7 @@
+zig-cache/
+zig-out/
+zig-tmp/
+.DS_Store
+*.zon
+*.sqlite-*
+
