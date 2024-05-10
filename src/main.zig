@@ -4,9 +4,8 @@ const c = @cImport({
 });
 
 pub fn main() !void {
-    const db: *c.sqlite3 = try openDb("/Volumes/KOBOeReader/.kobo/KoboReader.sqlite");
+    const db: *c.sqlite3 = try openDb("/Users/mbrown/src/github.com/mattbr0wn/highlights/KoboReader.sqlite");
     defer _ = c.sqlite3_close(db);
-    std.debug.print("Opened DB", .{});
 
     const sql: []const u8 = "SELECT ContentID, Text FROM Bookmark;";
     const stmt: *c.sqlite3_stmt = try prepareStatement(db, sql);
@@ -35,12 +34,27 @@ fn prepareStatement(db: *c.sqlite3, sql: []const u8) !*c.sqlite3_stmt {
     return stmt.?;
 }
 
+fn parseBookFileName(bookFile: []const u8) []const u8 {
+    const firstSlashIndex = std.mem.indexOf(u8, bookFile, "/");
+    const secondSlashIndex = if (firstSlashIndex) |index| std.mem.indexOfPos(u8, bookFile, index + 1, "/") else null;
+    const thirdSlashIndex = if (secondSlashIndex) |index| std.mem.indexOfPos(u8, bookFile, index + 1, "/") else null;
+
+    if (firstSlashIndex != null and secondSlashIndex != null and secondSlashIndex.? > firstSlashIndex.?) {
+        const dotIndex = std.mem.indexOfPos(u8, bookFile, thirdSlashIndex.?, ".") orelse bookFile.len;
+        return bookFile[thirdSlashIndex.? + 1 .. dotIndex];
+    } else {
+        return "";
+    }
+}
+
 fn executeQuery(stmt: *c.sqlite3_stmt) !void {
     while (c.sqlite3_step(stmt) == c.SQLITE_ROW) {
-        const bookTitle = std.mem.span(c.sqlite3_column_text(stmt, 0));
-        const bookmarkText = std.mem.span(c.sqlite3_column_text(stmt, 1));
+        const bookFile = std.mem.span(c.sqlite3_column_text(stmt, 0));
+        const highlight = std.mem.span(c.sqlite3_column_text(stmt, 1));
 
-        std.debug.print("Book Title: {s}\n", .{bookTitle});
-        std.debug.print("Highlight Text: {s}\n\n", .{bookmarkText});
+        const stdout = std.io.getStdOut().writer();
+
+        try stdout.print("Book: {s}\n", .{parseBookFileName(bookFile)});
+        try stdout.print("Highlight Text: {s}\n\n", .{highlight});
     }
 }
