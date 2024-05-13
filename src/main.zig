@@ -7,7 +7,7 @@ pub fn main() !void {
     const argv = std.os.argv;
 
     // open Database
-    const dbPath: []const u8 = "/Users/mbrown/src/github.com/mattbr0wn/highlights/KoboReader.sqlite";
+    const dbPath: []const u8 = "/Users/mbrown/src/github.com/mattbr0wn/klip/KoboReader.sqlite";
     const db: *sqlite.c.sqlite3 = try sqlite.openDb(dbPath);
     defer _ = sqlite.c.sqlite3_close(db);
 
