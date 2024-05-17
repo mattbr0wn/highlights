@@ -2,21 +2,28 @@ const std = @import("std");
 const sqlite = @import("sqlite.zig");
 const books = @import("books.zig");
 
-pub fn getHighlights(db: *sqlite.c.sqlite3, bookId: []const u8) !void {
-    var buffer: [256]u8 = undefined;
-    const sql = try std.fmt.bufPrint(&buffer, "SELECT VolumeID, Text FROM Bookmark WHERE VolumeID = '{s}';", .{bookId});
+pub fn getHighlights(db: *sqlite.c.sqlite3, bookId: [:0]u8) !void {
+    var bookBuf: [256]u8 = undefined;
+    var sqlBuf: [256]u8 = undefined;
+
+    const book = try getHighlightPath(&bookBuf, bookId);
+    const sql = try getHighlightSql(&sqlBuf, book);
 
     const stmt: *sqlite.c.sqlite3_stmt = try sqlite.prepareStatement(db, sql);
     defer _ = sqlite.c.sqlite3_finalize(stmt);
 
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("# {s}\n\n", .{books.parseBookFileName(bookId)});
+    try stdout.print("# {s}\n\n", .{books.parseBookFileName(book)});
 
     try sqlite.executeQuery(stmt, printHighlightsFromKobo);
 }
 
-pub fn getHighlightPath(buffer: *[256]u8, bookId: [*:0]u8) ![]const u8 {
-    return std.fmt.bufPrint(buffer, "file:///mnt/onboard/{s}.kepub.epub", .{bookId});
+fn getHighlightSql(buffer: *[256]u8, bookId: []const u8) ![]const u8 {
+    return std.fmt.bufPrint(buffer[0..], "select volumeid, text from bookmark where volumeid = '{s}';", .{bookId});
+}
+
+fn getHighlightPath(buffer: *[256]u8, bookId: [:0]u8) ![]const u8 {
+    return std.fmt.bufPrint(buffer[0..], "file:///mnt/onboard/{s}.kepub.epub", .{bookId});
 }
 
 fn printHighlightsFromKobo(stmt: *sqlite.c.sqlite3_stmt) !void {
